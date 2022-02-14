@@ -15,28 +15,11 @@ func init() {
 
 func setup(c *caddy.Controller) error {
 
-	a := New()
-
-	handler, err := initForward(c)
-
-	if err != nil {
-		return plugin.Error("referral", err)
-	}
-
-	a.handlers = append(a.handlers, handler)
+	r := &Referral{}
 
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		a.Next = next
-		return a
-	})
-
-	c.OnShutdown(func() error {
-		for _, handler := range a.handlers {
-			if err := handler.OnShutdown(); err != nil {
-				return err
-			}
-		}
-		return nil
+		r.Next = next
+		return r
 	})
 
 	return nil

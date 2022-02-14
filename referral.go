@@ -14,8 +14,7 @@ var log = clog.NewWithPlugin("referral")
 
 type Referral struct {
 	Next  plugin.Handler
-
-	handlers []HandlerWithCallbacks
+	handlers map[string]HandlerWithCallbacks
 }
 
 // HandlerWithCallbacks interface is made for handling the requests
@@ -27,11 +26,6 @@ type HandlerWithCallbacks interface {
 
 func (p *Referral) Name() string {
 	return name
-}
-
-// New initializes Alternate plugin
-func New() (f *Referral) {
-	return &Referral{}
 }
 
 func (p *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
