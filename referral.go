@@ -2,9 +2,13 @@ package referral
 
 import (
 	"context"
+	"github.com/coredns/coredns/plugin/forward"
+	"github.com/coredns/coredns/plugin/pkg/transport"
+	"time"
+
 	"github.com/coredns/coredns/plugin"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
-	"github.com/coredns/coredns/request"
+	"github.com/coredns/coredns/plugin/pkg/nonwriter"
 	"github.com/miekg/dns"
 )
 
@@ -17,24 +21,51 @@ type Referral struct {
 	handlers map[string]HandlerWithCallbacks
 }
 
-// HandlerWithCallbacks interface is made for handling the requests
 type HandlerWithCallbacks interface {
 	plugin.Handler
 	OnStartup() error
 	OnShutdown() error
 }
 
-func (p *Referral) Name() string {
+func New() (rf *Referral) {
+	return &Referral{handlers: make(map[string]HandlerWithCallbacks)}
+}
+
+func (rf *Referral) Name() string {
 	return name
 }
 
-func (p *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	state := request.Request{Req: r, W: w}
-	qName := state.Name()
-	qType := state.QType()
+const defaultExpire = 10 * time.Second
 
-	log.Debugf("query name, %s", qName)
-	log.Debugf("query type %d", qType)
+func (rf *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 
-	return dns.RcodeSuccess, nil
+	nw := nonwriter.New(w)
+	rcode, err := plugin.NextOrFailure(rf.Name(), rf.Next, ctx, nw, r)
+
+	if isReferral(nw.Msg) {
+		first := nw.Msg.Extra[0]
+		if a, ok := first.(*dns.A); ok {
+			host := a.A.String()
+			log.Debugf("the ip address is, %s", a.A.String())
+			if f, kk := rf.handlers[host]; kk {
+				return f.ServeDNS(ctx, w, r)
+			}
+			f := forward.New()
+			p := forward.NewProxy(host+":53", transport.DNS)
+			p.SetExpire(defaultExpire)
+			f.SetProxy(p)
+			rf.handlers[host] = f
+			return f.ServeDNS(ctx, nw, r)
+		}
+	}
+
+	if nw.Msg != nil {
+		w.WriteMsg(nw.Msg)
+	}
+
+	return rcode, err
+}
+
+func isReferral(msg *dns.Msg) bool {
+	return len(msg.Answer) == 0 && len(msg.Ns) > 0 && len(msg.Extra) > 0
 }

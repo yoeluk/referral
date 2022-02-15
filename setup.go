@@ -14,8 +14,7 @@ func init() {
 }
 
 func setup(c *caddy.Controller) error {
-
-	r := &Referral{}
+	r := New()
 
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		r.Next = next
