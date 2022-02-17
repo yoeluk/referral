@@ -39,10 +39,13 @@ const defaultExpire = 10 * time.Second
 
 func (rf *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 
+	log.Debugf("resolving query for question %s", r.Question[0].String())
+
 	nw := nonwriter.New(w)
 	rcode, err := plugin.NextOrFailure(rf.Name(), rf.Next, ctx, nw, r)
 
-	if isReferral(nw.Msg) {
+	if nw.Msg != nil && isReferral(nw.Msg) {
+		log.Debugf("found extras in the referral response, %d", len(nw.Msg.Extra))
 		first := nw.Msg.Extra[0]
 		if a, ok := first.(*dns.A); ok {
 			host := a.A.String()
