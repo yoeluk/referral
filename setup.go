@@ -21,5 +21,14 @@ func setup(c *caddy.Controller) error {
 		return r
 	})
 
+	c.OnShutdown(func() error {
+		for _, handler := range r.handlers {
+			if err := handler.OnShutdown(); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
 	return nil
 }
