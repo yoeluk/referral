@@ -54,7 +54,7 @@ func (rf *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 	if nw.Msg != nil && isReferral(nw.Msg) {
 		log.Debugf("found extras in the referral response, %d", len(nw.Msg.Extra))
 		var (
-			rcode int
+			rcode = dns.RcodeServerFailure
 			err error
 		)
 		extras := shuffleExtra(nw.Msg.Extra)
@@ -64,22 +64,22 @@ func (rf *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 				log.Debugf("the referral ip address, %s", a.A.String())
 				rnw := nonwriter.New(w)
 				if f, ok := rf.handlers[host]; ok {
-					f.ServeDNS(ctx, rnw, r)
+					rcode, err = f.ServeDNS(ctx, rnw, r)
 				} else {
 					f := forward.New()
 					p := forward.NewProxy(host+":53", transport.DNS)
 					p.SetExpire(defaultExpire)
 					f.SetProxy(p)
 					rf.handlers[host] = f
-					f.ServeDNS(ctx, rnw, r)
+					rcode, err = f.ServeDNS(ctx, rnw, r)
 				}
-				if rnw.Msg != nil {
+				if rnw.Msg != nil && rcode == dns.RcodeSuccess {
 					w.WriteMsg(rnw.Msg)
 					return rcode, err
 				}
 			}
 		}
-		return dns.RcodeServerFailure, err
+		return rcode, err
 	}
 
 	if nw.Msg != nil {
