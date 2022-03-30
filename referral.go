@@ -19,7 +19,7 @@ const name = "referral"
 var log = clog.NewWithPlugin("referral")
 
 type Referral struct {
-	Next  plugin.Handler
+	Next     plugin.Handler
 	handlers map[string]HandlerWithCallbacks
 }
 
@@ -55,7 +55,7 @@ func (rf *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 		log.Debugf("found extras in the referral response, %d", len(nw.Msg.Extra))
 		var (
 			rcode = dns.RcodeServerFailure
-			err error
+			err   error
 		)
 		extras := shuffleExtra(nw.Msg.Extra)
 		for _, rec := range extras {
@@ -83,6 +83,10 @@ func (rf *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 	}
 
 	if nw.Msg != nil {
+		log.Debugf("upstream answer is: %d", nw.Msg.Rcode)
+		for _, a := range nw.Msg.Answer {
+			log.Debugf("with answer: %s", a.String())
+		}
 		w.WriteMsg(nw.Msg)
 	}
 
