@@ -2,11 +2,10 @@ package referral
 
 import (
 	"context"
-	"math/rand"
-	"time"
-
 	"github.com/coredns/coredns/plugin/forward"
 	"github.com/coredns/coredns/plugin/pkg/transport"
+	"math/rand"
+	"time"
 
 	"github.com/coredns/coredns/plugin"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
@@ -53,6 +52,9 @@ func (rf *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 
 	if nw.Msg != nil && isReferral(nw.Msg) {
 		log.Debugf("found extras in the referral response, %d", len(nw.Msg.Extra))
+		for _, e := range nw.Msg.Extra {
+			log.Debugf("extra: %s", e.String())
+		}
 		var (
 			rcode = dns.RcodeServerFailure
 			err   error
@@ -83,7 +85,7 @@ func (rf *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 	}
 
 	if nw.Msg != nil {
-		log.Debugf("upstream answer is: %d", nw.Msg.Rcode)
+		log.Debugf("upstream response code is: %d", nw.Msg.Rcode)
 		for _, a := range nw.Msg.Answer {
 			log.Debugf("with answer: %s", a.String())
 		}
@@ -94,7 +96,7 @@ func (rf *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 }
 
 func isReferral(msg *dns.Msg) bool {
-	return len(msg.Answer) == 0 && len(msg.Ns) > 0 && len(msg.Extra) > 0
+	return len(msg.Answer) == 0 && len(msg.Ns) > 0 && len(msg.Extra) > 1
 }
 
 func shuffleExtra(es []dns.RR) []dns.RR {
