@@ -96,7 +96,11 @@ func (rf *Referral) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 }
 
 func isReferral(msg *dns.Msg) bool {
-	return len(msg.Answer) == 0 && len(msg.Ns) > 0 && len(msg.Extra) > 1
+	baseExtraLen := 0
+	if msg.IsEdns0() != nil {
+		baseExtraLen = 1
+	}
+	return len(msg.Answer) == 0 && len(msg.Ns) > 0 && len(msg.Extra) > baseExtraLen
 }
 
 func shuffleExtra(es []dns.RR) []dns.RR {
