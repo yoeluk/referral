@@ -12,7 +12,7 @@ A typical configuration
 ```go
 . {
     health :8080
-	referral
+    referral
     forward . 10.100.100.2:53
     debug
     log
